@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="icon.png" alt="United Supermarkets" width="160">
+</p>
+
 # United Rewards for Home Assistant
 
 Custom Home Assistant integration for polling United Supermarkets rewards points from the
