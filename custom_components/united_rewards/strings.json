@@ -1,0 +1,49 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "United Rewards",
+        "description": "Sign in with your shopunitedsupermarkets.com account. The integration can usually read the household id from your login token; enter it manually only if setup asks for it.",
+        "data": {
+          "email": "Email",
+          "password": "Password",
+          "household_id": "United household id"
+        }
+      },
+      "code": {
+        "title": "Email verification",
+        "description": "Enter the verification code emailed to {email}.",
+        "data": {
+          "code": "Verification code"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not connect to United Rewards",
+      "invalid_auth": "Invalid email or password",
+      "invalid_code": "Invalid verification code",
+      "household_id_required": "Could not find the household id automatically. Enter it manually.",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "This account is already configured",
+      "unknown": "Unexpected error"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "points": {
+        "name": "Points"
+      },
+      "expiring_points": {
+        "name": "Expiring points"
+      },
+      "next_expiration_date": {
+        "name": "Next expiration date"
+      },
+      "dollar_discount": {
+        "name": "Dollar discount"
+      }
+    }
+  }
+}
