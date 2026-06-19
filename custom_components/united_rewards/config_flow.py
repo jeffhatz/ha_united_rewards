@@ -21,6 +21,7 @@ from .api import (
 )
 from .const import (
     CONF_AUTH_TOKEN,
+    CONF_CUSTOMER_UUID,
     CONF_DEVICE_TOKEN,
     CONF_HOUSEHOLD_ID,
     CONF_OKTA_ID,
@@ -81,7 +82,8 @@ class UnitedRewardsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return await self.async_step_code()
             except UnitedRewardsAuthError:
                 errors["base"] = "invalid_auth"
-            except UnitedRewardsError:
+            except UnitedRewardsError as err:
+                _LOGGER.warning("United Rewards setup failed: %s", err)
                 errors["base"] = "cannot_connect"
             except Exception:
                 _LOGGER.exception("Unexpected exception during United Rewards setup")
@@ -105,7 +107,8 @@ class UnitedRewardsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 result = await self._client.verify_email_code(self._challenge, user_input["code"].strip())
             except UnitedRewardsAuthError:
                 errors["base"] = "invalid_code"
-            except UnitedRewardsError:
+            except UnitedRewardsError as err:
+                _LOGGER.warning("United Rewards verification failed: %s", err)
                 errors["base"] = "cannot_connect"
             except Exception:
                 _LOGGER.exception("Unexpected exception verifying United Rewards code")

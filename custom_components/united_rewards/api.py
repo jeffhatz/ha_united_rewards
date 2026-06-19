@@ -7,6 +7,7 @@ from datetime import date, datetime
 from email.utils import formatdate
 import base64
 import hashlib
+from http.cookies import CookieError, SimpleCookie
 import json
 import logging
 import secrets
@@ -294,23 +295,27 @@ class UnitedRewardsClient:
                 text = await response.text()
                 response.raise_for_status()
                 _extract_token_from_url(str(response.url)) or _extract_token_from_text(text)
+                cookie_header = _cookie_header_from_responses((*response.history, response))
+                userinfo_headers = {
+                    "Accept": "application/json, text/plain, */*",
+                    "User-Agent": USER_AGENT,
+                }
+                if cookie_header:
+                    userinfo_headers["Cookie"] = cookie_header
                 userinfo = await self._request_json(
                     "get",
                     f"{BASE_URL}/bin/safeway/unified/userinfo?banner={BANNER}&rand={uuid4()}",
-                    headers={
-                        "Accept": "application/json, text/plain, */*",
-                        "User-Agent": USER_AGENT,
-                    },
+                    headers=userinfo_headers,
                 )
                 if token := userinfo.get("SWY_SHOP_TOKEN"):
                     return str(token)
-                raise UnitedRewardsAuthError("United Rewards userinfo did not return a shop token")
+                raise UnitedRewardsError("United Rewards userinfo did not return a shop token")
         except aiohttp.ClientResponseError:
             raise
         except aiohttp.ClientError as err:
-            _LOGGER.debug("SSO redirect did not expose a token: %s", err)
+            raise UnitedRewardsError(f"United Rewards SSO failed: {err}") from err
 
-        return session_token
+        raise UnitedRewardsError("United Rewards SSO did not return a shop token")
 
     async def _request_json(
         self,
@@ -553,3 +558,19 @@ def _extract_token_from_text(text: str) -> str | None:
                 if len(part) > 40 and "." in part:
                     return part.strip(" ;,'\"")
     return None
+
+
+def _cookie_header_from_responses(responses: tuple[aiohttp.ClientResponse, ...]) -> str:
+    """Build a Cookie header from Set-Cookie headers in a redirect chain."""
+    cookies: dict[str, str] = {}
+    for response in responses:
+        for header in response.headers.getall("Set-Cookie", []):
+            parsed = SimpleCookie()
+            try:
+                parsed.load(header)
+            except CookieError:
+                _LOGGER.debug("Could not parse United Rewards Set-Cookie header")
+                continue
+            for name, morsel in parsed.items():
+                cookies[name] = morsel.value
+    return "; ".join(f"{name}={value}" for name, value in cookies.items())
