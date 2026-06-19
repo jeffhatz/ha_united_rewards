@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import date
 from typing import Any
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorEntityDescription, SensorStateClass
@@ -18,11 +19,11 @@ from .const import DOMAIN
 from .coordinator import UnitedRewardsCoordinator
 
 
-def _next_expiration_date(data: RewardScorecard) -> str | None:
+def _next_expiration_date(data: RewardScorecard) -> date | None:
     """Return the next expiration date with positive points."""
     return next(
         (
-            bucket.validity_end_date.isoformat()
+            bucket.validity_end_date
             for bucket in data.points
             if bucket.validity_end_date and bucket.value > 0
         ),
@@ -30,11 +31,17 @@ def _next_expiration_date(data: RewardScorecard) -> str | None:
     )
 
 
+def _next_expiration_date_iso(data: RewardScorecard) -> str | None:
+    """Return the next expiration date as an ISO string."""
+    next_date = _next_expiration_date(data)
+    return next_date.isoformat() if next_date else None
+
+
 @dataclass(frozen=True, kw_only=True)
 class UnitedRewardsSensorDescription(SensorEntityDescription):
     """United Rewards sensor description."""
 
-    value_fn: Callable[[RewardScorecard], int | str | None]
+    value_fn: Callable[[RewardScorecard], date | int | str | None]
     attrs_fn: Callable[[RewardScorecard], dict[str, Any]] | None = None
 
 
@@ -62,7 +69,7 @@ SENSORS: tuple[UnitedRewardsSensorDescription, ...] = (
         native_unit_of_measurement="points",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda data: data.will_expire,
-        attrs_fn=lambda data: {"next_expiration_date": _next_expiration_date(data)},
+        attrs_fn=lambda data: {"next_expiration_date": _next_expiration_date_iso(data)},
     ),
     UnitedRewardsSensorDescription(
         key="next_expiration_date",
@@ -114,7 +121,7 @@ class UnitedRewardsSensor(CoordinatorEntity[UnitedRewardsCoordinator], SensorEnt
         }
 
     @property
-    def native_value(self) -> int | str | None:
+    def native_value(self) -> date | int | str | None:
         """Return the sensor value."""
         if not self.coordinator.data:
             return None
